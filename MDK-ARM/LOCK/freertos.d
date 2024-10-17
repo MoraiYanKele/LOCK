@@ -41,4 +41,5 @@ lock/freertos.o: ..\Core\Src\freertos.c \
   ..\Middlewares\Third_Party\FreeRTOS\Source\CMSIS_RTOS_V2\cmsis_os2.h \
   ..\Core\Inc\dma.h ..\Core\Inc\tim.h ..\Core\Inc\usart.h \
   ..\Core\Inc\gpio.h D:\stm32\ARM\ARMCLANG\include\stdio.h \
-  D:\stm32\ARM\ARMCLANG\include\string.h
+  D:\stm32\ARM\ARMCLANG\include\string.h ..\Core\Inc\oled.h \
+  ..\Core\Inc\font.h

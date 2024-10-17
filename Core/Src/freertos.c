@@ -85,6 +85,9 @@ uint8_t fingerID;
 const uint8_t transmitBuff_PS_GetImage[20] = {0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x03, 0x01, 0x00, 0x05};
 const uint8_t transmitBuff_PS_GenChar[20] = {0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x04, 0x02, 0x01, 0x00, 0x08};
 const uint8_t transmitBuff_PS_Search[20] = {0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x08, 0x04, 0x01, 0x00, 0x00, 0x00, 0x20, 0x00, 0x2E};
+const uint8_t transmitBuff_PS_ControlBLN_Success[20] = {0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x07, 0x3C, 0x02, 0x07, 0x07, 0x05, 0x00, 0x59};
+const uint8_t transmitBuff_PS_ControlBLN_Failure[20] = {0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x07, 0x3C, 0x02, 0x04, 0x04, 0x05, 0x00, 0x53};
+
 uint8_t receiveBuff[20];
 
 
@@ -124,7 +127,7 @@ uint8_t SendCommand(const uint8_t* transmitBuff, uint16_t transmitSize, uint32_t
 // 0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x07, 0x00, 0x03, 0x00, 0x00, 0x0A
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef * huart, uint16_t Size)
 {
-  printf("in callback\n");
+
   if (huart == &huart2)
   {
     // for (int i = 0; i < 15; i++)
@@ -224,7 +227,7 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   xTaskCreate(FingerprintModuleTask, "FingerprintRecognition", 256, NULL, osPriorityNormal, &xFingerprintModuleTaskHandle);
-  // xTaskCreate(OledTask, "OLEDTask", 128, NULL, osPriorityNormal, &xOLEDTaskHandle);
+  xTaskCreate(OledTask, "OLEDTask", 128, NULL, osPriorityNormal, &xOLEDTaskHandle);
 
   /* USER CODE END RTOS_THREADS */
 
@@ -263,12 +266,12 @@ void FingerprintModuleTask(void *argument)
     {
     case INIT:
       fingerprintState = GET_IMAGE;
-      printf("INIT\n");
+  
       break;
 
     case GET_IMAGE:
       cmdResult = SendCommand(transmitBuff_PS_GetImage, 12, 3000);
-      printf("GET_IMAGE\n");
+
 
       if (cmdResult == 1)
       {
@@ -276,13 +279,12 @@ void FingerprintModuleTask(void *argument)
       }
       else
       {
-        fingerprintState = FAILURE;
+        fingerprintState = GET_IMAGE;
       }
       break;
 
     case GEN_CHAR:
       cmdResult = SendCommand(transmitBuff_PS_GenChar, 13, 3000);
-      printf("GEN_CHAR\n");
 
       if (cmdResult == 1)
       {
@@ -296,7 +298,7 @@ void FingerprintModuleTask(void *argument)
       break;
     case SEARCH_FINGERPRINT:
       cmdResult = SendCommand(transmitBuff_PS_Search, 17, 3000);
-      printf("SEARCH_FINGERPRINT\n");
+
 
       if (cmdResult == 1)
       {
@@ -310,11 +312,15 @@ void FingerprintModuleTask(void *argument)
     
     case SUCCESS_USER:
       printf("ok\n");
+      SendCommand(transmitBuff_PS_ControlBLN_Success, 16, 0);
+      
       // 打开门锁
       fingerprintState = INIT;
       break;
 
     case FAILURE:
+      SendCommand(transmitBuff_PS_ControlBLN_Failure, 16, 0);
+
       fingerprintState = INIT;
       break;
 
@@ -352,7 +358,6 @@ void OledTask(void *argument)
 
 uint8_t SendCommand(const uint8_t* transmitBuff, uint16_t transmitSize, uint32_t timeout)
 {
-  printf("in sendcommend\n");
   uint32_t startTime = HAL_GetTick(); 
   HAL_UART_Transmit_DMA(&huart2, transmitBuff, transmitSize);
   HAL_UARTEx_ReceiveToIdle_DMA(&huart2, receiveBuff, sizeof(receiveBuff));
